@@ -10,6 +10,10 @@
     "typecheck": "tsc -b"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/material": "^9.5.0",
+    "azure-maps-control": "^3.7.4",
     "js-cookie": "^3.0.8",
     "lucide-react": "^0.468.0",
     "react": "^19.2.0",

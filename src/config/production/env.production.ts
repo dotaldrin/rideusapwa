@@ -7,5 +7,4 @@ export const productionEnvironment: EnvironmentConfig = {
   locationHubUrl: import.meta.env.VITE_LOCATION_HUB_URL,
   taxicardHubUrl: import.meta.env.VITE_TAXICARD_HUB_URL,
   platformMessagesHubUrl: import.meta.env.VITE_PLATFORM_MESSAGES_HUB_URL,
-  azureMapsKey: import.meta.env.VITE_AZURE_MAPS_KEY,
 };

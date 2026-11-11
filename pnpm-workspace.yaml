@@ -1,2 +1,3 @@
 allowBuilds:
-  '@pnpm/exe': true
+  '@pnpm/exe': true  
+  esbuild: true

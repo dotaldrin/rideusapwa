@@ -1,2 +1,0 @@
-import { TripDraftForm } from '../features/booking/TripDraftForm';
-export function BookPage() {return <section className="book-page"><div className="container book-grid"><div><span className="eyebrow">RIDEUSA</span><h1>Let's get you going.</h1><p>Start by telling us where you're headed. Driver matching, fare estimates and checkout will be added after we connect the booking workflow.</p></div><TripDraftForm/></div></section>}

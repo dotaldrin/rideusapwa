@@ -5,5 +5,4 @@ export interface EnvironmentConfig {
   readonly locationHubUrl: string;
   readonly taxicardHubUrl: string;
   readonly platformMessagesHubUrl: string;
-  readonly azureMapsKey: string;
 }

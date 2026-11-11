@@ -93,10 +93,7 @@ export const env: EnvironmentConfig = {
     "VITE_PLATFORM_MESSAGES_HUB_URL",
   ),
 
-  azureMapsKey: requireValue(
-  selectedEnvironment.azureMapsKey,
-  "VITE_AZURE_MAPS_KEY",
-),
+  
 };
 
 /**
@@ -125,7 +122,7 @@ export const PLATFORM_MESSAGES_HUB_URL = resolveHubUrl(
   env.apiBaseUrl,
 );
 
-export const AZURE_MAPS_KEY = env.azureMapsKey;
+ 
 
 /**
  * Builds REST API URLs.
