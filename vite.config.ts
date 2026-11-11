@@ -14,12 +14,11 @@ export default defineConfig(({ mode }) => {
 
  if (mode !== "test") {
   const requiredVariables = [
-    "VITE_API_BASE_URL",
-    "VITE_RIDE_HUB_URL",
-    "VITE_LOCATION_HUB_URL",
-    "VITE_TAXICARD_HUB_URL",
-    "VITE_PLATFORM_MESSAGES_HUB_URL",
-    "VITE_AZURE_MAPS_KEY",
+  "VITE_API_BASE_URL",
+  "VITE_RIDE_HUB_URL",
+  "VITE_LOCATION_HUB_URL",
+  "VITE_TAXICARD_HUB_URL",
+  "VITE_PLATFORM_MESSAGES_HUB_URL",
   ];
 
   for (const name of requiredVariables) {
