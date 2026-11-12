@@ -3,10 +3,12 @@ import { Banknote, CarFront, CheckCircle2, CircleX, Clock, CreditCard, MapPin, N
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ApiError } from '../../../infrastructure/http/apiError';
-import { cancelRide, getRide } from '../../../services/rideApi';
+import { cancelRide, getRide, getTaxicard } from '../../../services/rideApi';
 import { getStoredCashRide, storeCashRide } from '../../../services/localStore';
 import { useSession } from '../../../services/session';
-import { RidePaymentType, RideStatus, type RideStatusValue, type RideTransaction } from '../../../types/contracts';
+import {
+  RidePaymentType, RideStatus, type RideStatusValue, type RideTransaction, type Taxicard,
+} from '../../../types/contracts';
 
 const POLL_MS = 5000;
 
@@ -38,6 +40,8 @@ const cancellable: RideStatusValue[] = [
   RideStatus.Pending, RideStatus.Created, RideStatus.Assigned, RideStatus.EnRouteToPickup, RideStatus.ArrivedAtPickup,
 ];
 const finished: RideStatusValue[] = [RideStatus.Completed, RideStatus.Cancelled, RideStatus.Failed];
+// The meter starts when the trip starts, so the fare card is only read from then on.
+const metered: RideStatusValue[] = [RideStatus.InProgress, RideStatus.Paused, RideStatus.Completed];
 
 const money = (amount: number | null | undefined, currency?: string | null) =>
   amount == null ? '—' : amount.toFixed(2) + (currency ? ' ' + currency : '');
@@ -58,6 +62,8 @@ export function RidePage() {
   const cashEmail = state?.email ?? (stored?.rideId === rideId ? stored.email : undefined);
 
   const [ride, setRide] = useState<RideTransaction | null>(null);
+  const [taxicard, setTaxicard] = useState<Taxicard | null>(null);
+  const noCard = useRef(false);
   const [error, setError] = useState('');
   const [cancelling, setCancelling] = useState(false);
   const [now, setNow] = useState(Date.now);
@@ -68,6 +74,13 @@ export function RidePage() {
       const current = await getRide(rideId, cashToken);
       setRide(current);
       setError('');
+      if (metered.includes(current.status) && !noCard.current) {
+        try {
+          const card = await getTaxicard(rideId, cashToken);
+          if (card) setTaxicard(card);
+          else noCard.current = true;   // priced from the driver's rates: stop asking
+        } catch { /* keep the last card; the next poll retries */ }
+      }
       if (finished.includes(current.status)) {
         done.current = true;
         // The ride is over, so the visitor may book again.
@@ -88,6 +101,7 @@ export function RidePage() {
     if (session === null || !Number.isInteger(rideId) || rideId <= 0) return;
     if (!isCustomer && !cashToken) { setError('This ride is not available on this device. Log in to see your rides.'); return; }
     done.current = false;
+    noCard.current = false;
     void load();
     const poll = window.setInterval(() => { if (!done.current && !document.hidden) void load(); }, POLL_MS);
     const tick = window.setInterval(() => setNow(Date.now()), 1000);
@@ -130,7 +144,10 @@ export function RidePage() {
     ride.status === RideStatus.Paused ? status <= RideStatus.InProgress : status <= ride.status;
   const secondsLeft = ride.status === RideStatus.Pending && ride.expiresAt
     ? Math.max(0, Math.round((Date.parse(ride.expiresAt) - now) / 1000)) : null;
-  const fare = ride.actualFare ?? ride.estimatedFare;
+  const live = taxicard && !over ? taxicard.total : null;
+  const fare = ride.actualFare ?? (taxicard?.isFinal ? taxicard.total : null) ?? ride.estimatedFare;
+  const lines = taxicard?.lines.filter((line) => line.isApplied && line.amount !== 0)
+    .sort((a, b) => a.tariffIndex - b.tariffIndex) ?? [];
   const vehicle = [ride.vehicleYear || null, ride.vehicleColor, ride.vehicleMake, ride.vehicleModel, ride.vehicleIdentifier]
     .filter(Boolean).join(' · ');
 
@@ -156,14 +173,34 @@ export function RidePage() {
         )}
       </div>
 
+      {taxicard && (
+        <div className="ride-panel ride-meter" aria-live="polite">
+          <h2>{taxicard.isFinal ? 'Fare' : 'Live fare'}</h2>
+          <p className="ride-meter-total">{money(taxicard.total, taxicard.currency)}</p>
+          {taxicard.rateMessage && <p className="ride-meter-rate">{taxicard.rateMessage}</p>}
+          {taxicard.rateAlert && <p className="ride-notice" role="status">{taxicard.rateAlert}</p>}
+          {lines.length > 0 && (
+            <ul className="ride-meter-lines">
+              {lines.map((line) => (
+                <li key={line.productTariffMemberId}>
+                  <span>{line.name}{line.displayDetail && <small>{line.displayDetail}</small>}</span>
+                  <span>{line.amount.toFixed(2)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {!taxicard.isFinal && <p className="ride-meter-note">Updates as you travel. The final fare is set when the trip ends.</p>}
+        </div>
+      )}
+
       <div className="ride-panel">
         <h2>Trip</h2>
         <dl className="ride-facts">
           <div><dt><MapPin size={16} /> From</dt><dd>{ride.pickupAddress}</dd></div>
           <div><dt><MapPin size={16} /> To</dt><dd>{ride.dropoffAddress}</dd></div>
           {ride.driverName && <div><dt><CarFront size={16} /> Driver</dt><dd>{ride.driverName}{vehicle && <small>{vehicle}</small>}</dd></div>}
-          <div><dt>{cash ? <Banknote size={16} /> : <CreditCard size={16} />} {ride.status === RideStatus.Completed ? 'Fare' : 'Estimate'}</dt>
-            <dd>{money(fare, ride.currency)}</dd></div>
+          <div><dt>{cash ? <Banknote size={16} /> : <CreditCard size={16} />} {ride.status === RideStatus.Completed ? 'Fare' : live != null ? 'So far' : 'Estimate'}</dt>
+            <dd>{money(live ?? fare, ride.currency)}</dd></div>
         </dl>
 
         <p className={'ride-pay ' + (cash ? 'cash' : 'card')}>

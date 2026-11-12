@@ -73,3 +73,14 @@
 .ride-track [aria-current] span { box-shadow: 0 0 0 5px #bfe6ee; }
 @media (prefers-reduced-motion: no-preference) { .ride-track [aria-current] span { animation: ride-pulse 1.6s ease-in-out infinite; } }
 @keyframes ride-pulse { 50% { box-shadow: 0 0 0 9px rgba(0, 126, 152, .12); } }
+.ride-rates { font-size: 14px; }
+.ride-rates summary { cursor: pointer; color: #006a91; font-weight: 600; padding: 6px 0; min-height: 32px; }
+.ride-rates ul, .ride-meter-lines { list-style: none; padding: 0; margin: 4px 0; }
+.ride-rates li, .ride-meter-lines li { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid #e3eaf0; }
+.ride-rates li span:last-child, .ride-meter-lines li > span:last-child { font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ride-rates small, .ride-meter-lines small { display: block; color: #5b6e80; font-size: 12px; }
+.ride-meter { text-align: center; }
+.ride-meter-total { font: 800 clamp(40px, 12vw, 60px) Manrope, sans-serif; margin: 0; font-variant-numeric: tabular-nums; }
+.ride-meter-rate { font-weight: 600; color: #5b6e80; margin: 4px 0 10px; }
+.ride-meter-lines { text-align: left; }
+.ride-meter-note { font-size: 13px; color: #5b6e80; margin: 8px 0 0; }

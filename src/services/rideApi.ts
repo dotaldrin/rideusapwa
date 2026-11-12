@@ -1,7 +1,8 @@
+import { ApiError } from '../infrastructure/http/apiError';
 import { apiFetch } from '../infrastructure/http/apiFetch';
 import type {
   CashRideResponse, CreateRideRequest, DriverRideOption, NearbyDriversQuery,
-  RideCategory, RideStopInput, RideTransaction, RoutePreview,
+  RideCategory, RideStopInput, RideTransaction, RoutePreview, Taxicard,
 } from '../types/contracts';
 
 /**
@@ -46,6 +47,22 @@ export function getRide(rideId: number, cashToken?: string): Promise<RideTransac
   return cashToken
     ? apiFetch<RideTransaction>('/api/cash-rides/' + rideId, { headers: cashRideAuth(cashToken) })
     : apiFetch<RideTransaction>('/api/RideTransaction/' + rideId);
+}
+
+/**
+ * The live fare card for a ride, or null when the ride has none (rides priced from
+ * the driver's own rates have no card, and the API answers 404 for those).
+ */
+export async function getTaxicard(rideId: number, cashToken?: string): Promise<Taxicard | null> {
+  try {
+    const card = cashToken
+      ? await apiFetch<Taxicard | undefined>('/api/cash-rides/' + rideId + '/taxicard', { headers: cashRideAuth(cashToken) })
+      : await apiFetch<Taxicard | undefined>('/api/RideTransaction/' + rideId + '/taxicard');
+    return card ?? null;
+  } catch (failure) {
+    if (failure instanceof ApiError && failure.status === 404) return null;
+    throw failure;
+  }
 }
 
 export function cancelRide(rideId: number, reason: string, cashToken?: string): Promise<RideTransaction> {

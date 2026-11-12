@@ -8,7 +8,8 @@ import { bookCashRide, findDrivers, getActiveRide, getCategories, previewRoute, 
 import { getCashEmail, getPaymentPreference, getStoredCashRide, setCashEmail, storeCashRide } from '../../../services/localStore';
 import { useSession } from '../../../services/session';
 import {
-  RidePaymentType, type CreateRideRequest, type DriverRideOption, type RideStopInput, type RideTypeCode,
+  RidePaymentType, TariffMeasure, type CreateRideRequest, type DriverRideOption, type RideRate, type RideStopInput,
+  type RideTypeCode,
 } from '../../../types/contracts';
 
 const rideTypes = ['Taxi', 'Livery', 'Rideshare'] as const;
@@ -29,6 +30,20 @@ type Search = {
 const stop = ({ latitude, longitude, address }: Point): RideStopInput => ({ latitude, longitude, address });
 const message = (failure: unknown, fallback: string) =>
   failure instanceof Error && failure.message ? failure.message : fallback;
+
+const measure: Record<number, string> = {
+  [TariffMeasure.Mile]: 'mile', [TariffMeasure.Kilometer]: 'km', [TariffMeasure.Second]: 'second',
+  [TariffMeasure.Minute]: 'minute', [TariffMeasure.Trip]: 'trip',
+};
+
+/** "2.50", "0.70 per 0.2 mile", "0.50 per minute": one fare-card line in rider terms. */
+function rateText({ cost, unitQuantity, unitOfMeasure }: RideRate): string {
+  if (cost == null) return 'Varies';
+  const unit = unitOfMeasure != null ? measure[unitOfMeasure] : undefined;
+  if (!unit) return cost.toFixed(2);
+  const quantity = unitQuantity != null && unitQuantity !== 1 ? unitQuantity + ' ' : '';
+  return cost.toFixed(2) + ' per ' + quantity + unit;
+}
 
 export function BookPage() {
   const navigate = useNavigate();
@@ -257,6 +272,15 @@ export function BookPage() {
                     : driver.estimatedFare == null ? 'Fare unavailable'
                       : driver.estimatedFare.toFixed(2) + (driver.currency ? ' ' + driver.currency : '')}</span>
                   {driver.rateMessage && <span>{driver.rateMessage}</span>}
+                  {!!driver.rates?.length && (
+                    <details className="ride-rates">
+                      <summary>{driver.pricingBasis === 'UPFRONT' ? 'How this price is set' : 'Rates'}</summary>
+                      <ul>{driver.rates.map((rate, index) => (
+                        <li key={index}><span>{rate.name}</span><span>{rateText(rate)}</span></li>
+                      ))}</ul>
+                      {driver.fareAuthority && <small>Fare set by {driver.fareAuthority}</small>}
+                    </details>
+                  )}
                 </label>
               );
             })}

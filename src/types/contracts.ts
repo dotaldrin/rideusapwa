@@ -59,8 +59,23 @@ export interface NearbyDriversQuery {
   paymentType: RidePaymentTypeValue;
 }
 
+/** RunDelta.Contracts.Enums.TariffMeasure */
+export const TariffMeasure = { None: 0, Mile: 1, Kilometer: 2, Second: 3, Minute: 4, Trip: 5 } as const;
+
+/** RunDelta.Contracts.DTO.RideRateDto: one line of the fare card (or of the driver's own rates). */
+export interface RideRate {
+  name: string;
+  cost: number | null;
+  unitQuantity: number | null;
+  unitOfMeasure: number | null;
+}
+
 /** RunDelta.Contracts.DTO.DriverRideOptionDto */
 export interface DriverRideOption {
+  rates?: RideRate[];
+  fareAuthority?: string | null;
+  fareModeKey?: string | null;
+  pricingBasis?: string | null;
   driverId: number;
   driverName: string | null;
   vehicleMake: string | null;
@@ -128,6 +143,33 @@ export interface RideTransaction {
   completedAt?: string | null;
   cancelledAt?: string | null;
   expiresAt?: string | null;
+}
+
+/** RunDelta.Contracts.DTO.TaxicardLineDto */
+export interface TaxicardLine {
+  productTariffMemberId: number;
+  tariffIndex: number;
+  name: string;
+  quantity: number;
+  amount: number;
+  isApplied: boolean;
+  displayDetail?: string | null;
+}
+
+/** RunDelta.Contracts.DTO.TaxicardDto: the server-authoritative live fare for a ride. */
+export interface Taxicard {
+  rideId: number;
+  currency: string;
+  total: number;
+  isFinal: boolean;
+  revision: number;
+  elapsedSeconds?: number | null;
+  distanceMeters?: number | null;
+  lines: TaxicardLine[];
+  rateCode?: string | null;
+  rateMessage?: string | null;
+  rateAlert?: string | null;
+  pricingBasis?: string | null;
 }
 
 /** RunDelta.Contracts.DTO.CashRide.CashRideResponseDto */
