@@ -1,11 +1,17 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { LocateFixed, MapPin, Search } from 'lucide-react';
+import { Building2, GraduationCap, Hospital, LocateFixed, MapPin, Plane, Search } from 'lucide-react';
 import * as atlas from 'azure-maps-control';
 import 'azure-maps-control/dist/atlas.min.css';
 import { getMapsToken } from '../../../services/maps/azureMapsToken';
 
-type Point = { latitude: number; longitude: number; address: string };
-type Match = { address?: { freeformAddress?: string }; position?: { lat: number; lon: number } };
+export type Point = { latitude: number; longitude: number; address: string; name?: string; kind?: PlaceKind };
+export type PlaceKind = 'airport' | 'hospital' | 'school' | 'business' | 'address';
+type Match = {
+  type?: string;
+  poi?: { name?: string; categories?: string[] };
+  address?: { freeformAddress?: string };
+  position?: { lat: number; lon: number };
+};
 
 async function mapsRequest<T>(path: string, query: Record<string, string>, signal?: AbortSignal): Promise<T> {
   const { accessToken, clientId } = await getMapsToken();
@@ -18,9 +24,42 @@ async function mapsRequest<T>(path: string, query: Record<string, string>, signa
   return response.json() as Promise<T>;
 }
 
-export function AddressField({ label, currentLocation, onChange }: {
+function placeKind(match: Match): PlaceKind {
+  if (match.type !== 'POI') return 'address';
+  const categories = (match.poi?.categories ?? []).join(' ').toLowerCase();
+  if (categories.includes('airport')) return 'airport';
+  if (/hospital|clinic|medical|health|emergency|doctor|pharmacy/.test(categories)) return 'hospital';
+  if (/school|university|college/.test(categories)) return 'school';
+  return 'business';
+}
+
+function toPoint(match: Match): Point | null {
+  const { address, position, poi } = match;
+  if (!address?.freeformAddress || !position || !Number.isFinite(position.lat) || !Number.isFinite(position.lon)) return null;
+  const name = poi?.name?.trim();
+  return {
+    // The driver sees this text, so a named place keeps its name in front of the street address.
+    address: name ? name + ', ' + address.freeformAddress : address.freeformAddress,
+    latitude: position.lat,
+    longitude: position.lon,
+    name: name || undefined,
+    kind: placeKind(match),
+  };
+}
+
+const kindIcon = { airport: Plane, hospital: Hospital, school: GraduationCap, business: Building2, address: MapPin };
+const kindLabel = { airport: 'Airport', hospital: 'Medical', school: 'School', business: 'Business', address: 'Address' };
+
+/**
+ * Address box with suggestions as you type. It searches street addresses and
+ * named places together (businesses, hospitals, airports, schools), so a rider can
+ * type "Mercy Hospital" or "Walmart" instead of a street address. Results are
+ * biased toward `near` (the pickup, or the rider's location) when it is known.
+ */
+export function AddressField({ label, currentLocation, near, onChange }: {
   label: string;
   currentLocation?: boolean;
+  near?: { latitude: number; longitude: number } | null;
   onChange: (point: Point | null) => void;
 }) {
   const id = useId();
@@ -28,36 +67,48 @@ export function AddressField({ label, currentLocation, onChange }: {
   const [matches, setMatches] = useState<Point[]>([]);
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const chosen = useRef('');
+  const nearLat = near?.latitude;
+  const nearLon = near?.longitude;
 
   function choose(point: Point) {
+    chosen.current = point.address;
     setValue(point.address);
     setMatches([]);
     setStatus('');
     onChange(point);
   }
 
-  async function search() {
-    if (!value.trim() || busy) return;
-    setBusy(true);
-    setStatus('');
-    try {
-      const result = await mapsRequest<{ results?: Match[] }>('search/fuzzy/json', {
-        query: value.trim(), limit: '5', countrySet: 'US',
-      });
-      const options = (result.results ?? []).flatMap(({ address, position }) =>
-        address?.freeformAddress && position && Number.isFinite(position.lat) && Number.isFinite(position.lon)
-          ? [{ address: address.freeformAddress, latitude: position.lat, longitude: position.lon }] : []);
-      setMatches(options);
-      if (!options.length) setStatus('No matches. Try a street address with a city or ZIP code.');
-    } catch {
-      setStatus('Address search is unavailable. Try again.');
-    } finally {
-      setBusy(false);
-    }
-  }
+  // Search shortly after the rider stops typing; a newer keystroke cancels the older request.
+  useEffect(() => {
+    const query = value.trim();
+    if (query.length < 3 || query === chosen.current) { setBusy(false); return; }
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setBusy(true);
+      try {
+        const bias: Record<string, string> = nearLat != null && nearLon != null
+          ? { lat: String(nearLat), lon: String(nearLon), radius: '80000' } : {};
+        const result = await mapsRequest<{ results?: Match[] }>('search/fuzzy/json', {
+          query, limit: '7', countrySet: 'US', typeahead: 'true', ...bias,
+        }, controller.signal);
+        const options = (result.results ?? []).flatMap((match) => { const point = toPoint(match); return point ? [point] : []; });
+        setMatches(options);
+        setStatus(options.length ? '' : 'No matches. Try a business name, or a street address with a city or ZIP code.');
+      } catch (failure) {
+        if (failure instanceof DOMException && failure.name === 'AbortError') return;
+        setMatches([]);
+        setStatus('Search is unavailable. Try again.');
+      } finally {
+        if (!controller.signal.aborted) setBusy(false);
+      }
+    }, 300);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [value, nearLat, nearLon]);
 
   async function locate() {
-    setBusy(true);
+    setLocating(true);
     setStatus('');
     try {
       const { coords: { latitude, longitude } } = await new Promise<GeolocationPosition>((resolve, reject) =>
@@ -67,11 +118,11 @@ export function AddressField({ label, currentLocation, onChange }: {
       });
       const address = result.addresses?.[0]?.address?.freeformAddress;
       if (!address) throw new Error('No address found');
-      choose({ address, latitude, longitude });
+      choose({ address, latitude, longitude, kind: 'address' });
     } catch {
-      setStatus('Could not resolve your current location. Search for your pickup address.');
+      setStatus('Could not find your current location. Type your pickup address instead.');
     } finally {
-      setBusy(false);
+      setLocating(false);
     }
   }
 
@@ -79,18 +130,28 @@ export function AddressField({ label, currentLocation, onChange }: {
     <div className="ride-address">
       <div className="ride-label">
         <label htmlFor={id}><MapPin size={18} /> {label}</label>
-        {currentLocation && <button className="ride-link" type="button" onClick={locate} disabled={busy}><LocateFixed size={16} /> Use current location</button>}
+        {currentLocation && <button className="ride-link" type="button" onClick={locate} disabled={locating}><LocateFixed size={16} /> {locating ? 'Locating…' : 'Use current location'}</button>}
       </div>
       <div className="ride-address-input">
-        <input id={id} value={value} placeholder={'Enter ' + label.toLowerCase()} readOnly={busy}
-          onChange={(event) => { setValue(event.target.value); setMatches([]); setStatus(''); onChange(null); }}
-          onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void search(); } }} />
-        <button type="button" aria-label={'Search ' + label.toLowerCase()} onClick={search} disabled={busy || !value.trim()}><Search size={20} /></button>
+        <input id={id} value={value} autoComplete="off" inputMode="search" enterKeyHint="search"
+          placeholder={currentLocation ? 'Enter pickup address' : 'Business, hospital, airport or address'}
+          aria-autocomplete="list" aria-expanded={matches.length > 0}
+          onChange={(event) => { chosen.current = ''; setValue(event.target.value); setMatches([]); setStatus(''); onChange(null); }}
+          onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); if (matches[0]) choose(matches[0]); } }} />
+        <span className="ride-address-icon" aria-hidden="true"><Search size={20} /></span>
       </div>
-      {busy && <p role="status">Looking up address…</p>}
-      {status && <p role="status">{status}</p>}
-      {matches.length > 0 && <ul className="ride-matches">{matches.map((point, index) =>
-        <li key={index}><button type="button" onClick={() => choose(point)}>{point.address}</button></li>)}</ul>}
+      {busy && <p role="status">Searching…</p>}
+      {status && !busy && <p role="status">{status}</p>}
+      {matches.length > 0 && <ul className="ride-matches">{matches.map((point, index) => {
+        const Icon = kindIcon[point.kind ?? 'address'];
+        return (
+          <li key={index}><button type="button" onClick={() => choose(point)}>
+            <Icon size={18} aria-hidden="true" />
+            <span><strong>{point.name ?? point.address}</strong>
+              <small>{point.name ? point.address.slice(point.name.length + 2) + ' · ' : ''}{kindLabel[point.kind ?? 'address']}</small></span>
+          </button></li>
+        );
+      })}</ul>}
     </div>
   );
 }

@@ -1,0 +1,48 @@
+/* Mobile-first app shell. Built for phones and tablets; on a laptop it is simply a centered column. */
+html, body, #root { height: 100%; }
+body { background: #eef3f7; -webkit-tap-highlight-color: transparent; }
+.app-shell { min-height: 100dvh; display: flex; flex-direction: column; color: #10263b; }
+.app-bar { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  height: 54px; padding: 0 12px; padding-top: env(safe-area-inset-top); background: #08172e; color: #eaf2ff; box-sizing: content-box; }
+.app-bar-actions { display: flex; gap: 4px; }
+.app-bar-end { justify-content: flex-end; }
+.app-bar-actions a { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; }
+.app-bar-actions a:active { background: #1c3050; }
+.app-brand { font: 800 22px Manrope, sans-serif; letter-spacing: -1px; }
+.app-brand span { color: #80e2cd; }
+.app-main { flex: 1; padding: 12px 0 calc(78px + env(safe-area-inset-bottom)); }
+.app-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(3, 1fr);
+  background: #fff; border-top: 1px solid #d5dfe7; padding-bottom: env(safe-area-inset-bottom); }
+.app-nav a { display: grid; justify-items: center; gap: 2px; padding: 9px 4px 8px; font-size: 12px; font-weight: 600; color: #5b6e80; min-height: 58px; }
+.app-nav a.active { color: #007e98; }
+
+.account-page, .pay-choice { width: min(100% - 24px, 680px); margin: 0 auto; }
+.account-page label { display: block; font-weight: 700; margin: 14px 0 6px; }
+.account-page input, .ride-email input { width: 100%; min-height: 48px; border: 1px solid #b9c8d5; border-radius: 12px; padding: 10px 12px; font-size: 16px; color: inherit; background: #fff; }
+.account-page input:focus, .ride-email input:focus { outline: 2px solid #007e98; border-color: transparent; }
+.account-page .ride-submit, .ride-panel .ride-submit { margin-top: 16px; }
+.account-page .ride-link, .ride-activate .ride-link { margin-top: 10px; min-height: 44px; }
+.account-hint { font-size: 13px; color: #5b6e80; }
+a.ride-submit { text-decoration: none; }
+
+/* CASH | CARD: two targets filling the screen, nothing else. */
+.pay-choice { min-height: calc(100dvh - 54px - 78px - 24px); display: flex; flex-direction: column; }
+.pay-choice h1 { font-size: clamp(26px, 6vw, 38px); text-align: center; margin: 14px 0; }
+.pay-options { flex: 1; display: grid; gap: 12px; grid-template-rows: 1fr 1fr; }
+.pay-options button { display: grid; place-content: center; justify-items: center; gap: 8px; border: 0; border-radius: 24px;
+  background: #fff; color: #10263b; padding: 20px; box-shadow: 0 1px 0 #d5dfe7; }
+.pay-options button:first-child { background: #0b2339; color: #fff; }
+.pay-options button:disabled { opacity: .6; }
+.pay-options strong { font: 800 clamp(34px, 10vw, 56px) Manrope, sans-serif; letter-spacing: 1px; }
+.pay-options span { font-size: 15px; opacity: .85; }
+@media (min-width: 700px) and (orientation: landscape) { .pay-options { grid-template-rows: none; grid-template-columns: 1fr 1fr; } }
+
+.card-list, .ride-history { list-style: none; padding: 0; margin: 0 0 6px; }
+.card-list li { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid #dce5ec; }
+.card-list li > span { flex: 1; display: grid; }
+.card-list small, .ride-history small, .ride-facts small, .ride-matches small { color: #5b6e80; font-size: 13px; display: block; }
+.card-remove { border: 0; background: none; color: #a4262c; width: 44px; height: 44px; display: grid; place-items: center; }
+.card-form { margin-top: 12px; }
+.ride-history li + li { border-top: 1px solid #dce5ec; }
+.ride-history a { display: grid; gap: 2px; padding: 12px 0; }
+.settings-pay { grid-template-columns: 1fr 1fr; margin-bottom: 8px; }
