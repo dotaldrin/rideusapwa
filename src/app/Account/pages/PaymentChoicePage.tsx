@@ -52,7 +52,7 @@ export function PaymentChoicePage() {
           <CreditCard size={44} />
           <strong>CARD</strong>
           <span>{methods === null ? 'Checking your card…'
-            : card ? card.brand + ' ending ' + card.last4 : 'Add a card to pay in the app'}</span>
+            : card ? (card.brand ?? 'Card') + ' ending ' + (card.last4 ?? '••••') : 'Add a card to pay in the app'}</span>
         </button>
       </div>
     </section>

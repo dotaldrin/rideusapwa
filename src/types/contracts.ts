@@ -2,6 +2,7 @@
  * TypeScript mirrors of RunDelta.Contracts. The API serializes property names in
  * camelCase and enums as numbers, so every enum here carries the backend's value.
  * Only the fields this app reads or sends are declared.
+ * Checked field by field against the API's OpenAPI document (swagger v1).
  */
 
 /** RunDelta.Contracts.Enums.RideStatus */
@@ -33,7 +34,7 @@ export interface RideStopInput {
 /** RunDelta.Contracts.Responses.Operations.RideCategoryResponse */
 export interface RideCategory {
   productCategoryId: number;
-  name: string;
+  name: string | null;
   description?: string | null;
 }
 
@@ -64,7 +65,7 @@ export const TariffMeasure = { None: 0, Mile: 1, Kilometer: 2, Second: 3, Minute
 
 /** RunDelta.Contracts.DTO.RideRateDto: one line of the fare card (or of the driver's own rates). */
 export interface RideRate {
-  name: string;
+  name: string | null;
   cost: number | null;
   unitQuantity: number | null;
   unitOfMeasure: number | null;
@@ -129,8 +130,8 @@ export interface RideTransaction {
   vehicleYear?: number | null;
   vehicleColor?: string | null;
   vehicleIdentifier?: string | null;
-  pickupAddress: string;
-  dropoffAddress: string;
+  pickupAddress: string | null;
+  dropoffAddress: string | null;
   estimatedDistanceMiles: number;
   estimatedFare?: number | null;
   estimatedTravelTimeSeconds: number;
@@ -149,7 +150,7 @@ export interface RideTransaction {
 export interface TaxicardLine {
   productTariffMemberId: number;
   tariffIndex: number;
-  name: string;
+  name: string | null;
   quantity: number;
   amount: number;
   isApplied: boolean;
@@ -159,7 +160,7 @@ export interface TaxicardLine {
 /** RunDelta.Contracts.DTO.TaxicardDto: the server-authoritative live fare for a ride. */
 export interface Taxicard {
   rideId: number;
-  currency: string;
+  currency: string | null;
   total: number;
   isFinal: boolean;
   revision: number;
@@ -194,8 +195,8 @@ export interface AccountSession {
 /** RunDelta.Contracts.DTO.CustomerPaymentMethodDto */
 export interface CustomerPaymentMethod {
   customerPaymentMethodId: number;
-  brand: string;
-  last4: string;
+  brand: string | null;
+  last4: string | null;
   expirationMonth: number;
   expirationYear: number;
   isDefault: boolean;

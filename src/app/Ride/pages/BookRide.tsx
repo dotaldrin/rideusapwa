@@ -101,7 +101,7 @@ export function BookPage() {
 
       const code = rideType.toUpperCase() as RideTypeCode;
       const categories = await getCategories(loggedIn);
-      const category = categories.find(({ name }) => name.trim().toUpperCase() === code);
+      const category = categories.find(({ name }) => name?.trim().toUpperCase() === code);
       if (!category) throw new Error(rideType + ' is currently unavailable.');
 
       const route = await previewRoute(loggedIn, stop(pickup), stop(dropoff), intermediateStops);

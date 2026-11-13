@@ -113,11 +113,11 @@ export function CardPage() {
           {methods?.map((method) => (
             <li key={method.customerPaymentMethodId}>
               <CreditCard size={22} />
-              <span><strong>{method.brand} ending {method.last4}</strong>
+              <span><strong>{method.brand ?? 'Card'} ending {method.last4 ?? '••••'}</strong>
                 <small>Expires {String(method.expirationMonth).padStart(2, '0')}/{method.expirationYear}{method.isDefault ? ' · Used for rides' : ''}</small></span>
               {!method.isDefault && <button className="ride-link" type="button" disabled={busy}
                 onClick={() => act(() => setDefaultPaymentMethod(method.customerPaymentMethodId))}>Use this</button>}
-              <button className="card-remove" type="button" disabled={busy} aria-label={'Remove card ending ' + method.last4}
+              <button className="card-remove" type="button" disabled={busy} aria-label={'Remove card ending ' + (method.last4 ?? '')}
                 onClick={() => act(() => deletePaymentMethod(method.customerPaymentMethodId))}><Trash2 size={18} /></button>
             </li>
           ))}
